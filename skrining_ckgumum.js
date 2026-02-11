@@ -1,11 +1,12 @@
 // ==UserScript==
 // @name         SKRINING CKG UMUM
 // @namespace    http://tampermonkey.net/
-// @version      1.2
-// @description  Pemeriksan mandiri dan pelayanan nakes
+// @version      2.0
+// @description  Pemeriksan mandiri dan pelayanan nakes + Auto Force Skip
 // @author       2026 © Adih Puskesmas Kosambi
 // @match        https://sehatindonesiaku.kemkes.go.id/ckg-pelayanan*
 // @match        https://form.kemkes.go.id/*
+// @match        https://raw.githubusercontent.com/adihpkm/ckgumum.app/refs/heads/main/daftar_ckgumum.js
 // @run-at       document-idle
 // @grant        GM_setValue
 // @grant        GM_getValue
@@ -62,9 +63,9 @@
     const SKIP_LIST = [
         "sppb", "mini", "kadar co", "x-ray tb", "pemeriksaan tuberkulosis", "fibrosis",
         "sirosis hati", "pemeriksaan hepatitis", "pemeriksaan hiv",
-        "pemeriksaan sifilis", "kanker payudara", "hpv-dna",
+        "pemeriksaan sifilis", "kanker payudara", "hpv-dna", "poct",
         "inspekulo", "iva", "calon pengantin", "fungsi ginjal", "kerusakan ginjal",
-        "jantung", "usus", "pemeriksaan ppok", "sikilas mobilisasi", "penurunan kognitif"
+        "jantung", "kanker usus", "pemeriksaan ppok", "sikilas mobilisasi", "penurunan kognitif"
   ];
 
    const TARGETS = [
@@ -192,11 +193,24 @@
     ];
 
     // =================================================================
-    // 3. UI SIMPLE
+    // 3. UI SIMPLE + TOMBOL PAKSA JALAN
     // =================================================================
 
     const debugBox = document.createElement('div');
-    debugBox.style.cssText = "position:fixed; bottom:10px; left:10px; background:rgba(0,0,0,0.85); color:#fff; padding:8px 15px; font-size:12px; z-index:999999; border-radius:20px; font-family:sans-serif; border: 1px solid #444; pointer-events:none;";
+    debugBox.style.cssText = "position:fixed; bottom:10px; left:10px; background:rgba(0,0,0,0.85); color:#fff; padding:8px 15px; font-size:12px; z-index:999999; border-radius:20px; font-family:sans-serif; border: 1px solid #444; width:200px;";
+
+    // --- FITUR PAKSA JALAN MANUAL ---
+    const btnForceRun = document.createElement('button');
+    btnForceRun.innerText = "🚨 PAKSA JALAN / SKIP";
+    btnForceRun.style.cssText = "background:#ef4444; color:white; width:100%; border:none; padding:8px; margin-top:5px; border-radius:10px; cursor:pointer; font-weight:bold;";
+    btnForceRun.onclick = () => {
+        updateUI("🚨 MEMAKSA SKIP...");
+        window.location.href = "https://sehatindonesiaku.kemkes.go.id/ckg-pendaftaran-individu";
+    };
+
+    const statusDiv = document.createElement('div');
+    debugBox.appendChild(statusDiv);
+    debugBox.appendChild(btnForceRun);
     document.body.appendChild(debugBox);
 
     function updateUI(statusOverride) {
@@ -204,10 +218,7 @@
         const g = CACHE.gender || "-";
         const u = CACHE.umur || 0;
         const k = (u >= 60) ? "Lansia" : "Dewasa";
-
-        // FORMAT SESUAI PERMINTAAN: Nama | Jenis Kelamin | Umur | Kategori
-        // Status proses ditampilkan kecil di bawahnya agar user tahu script berjalan
-        debugBox.innerHTML = `
+        statusDiv.innerHTML = `
             <div style="font-weight:bold; font-size:13px; margin-bottom:2px;">${n} | ${g} | ${u} Th | ${k}</div>
             <div style="font-size:10px; color:#fbbf24;">${statusOverride || 'Ready'}</div>
         `;
@@ -274,14 +285,8 @@
         generatedData.isGenerated = true;
     }
 
-    // =================================================================
-    // 5. PROFILE & INPUT
-    // =================================================================
-
     function scrapeProfile() {
         try {
-            // Coba ambil Nama (Biasanya di header atau bold text)
-            // Selector ini mencoba menebak posisi nama di kartu profil
             const nameEl = document.querySelector('h1, h2, .font-bold.text-xl');
             if(nameEl && nameEl.innerText.length > 3) {
                  const name = nameEl.innerText.trim();
@@ -364,7 +369,6 @@
         return false;
     }
 
-    // AUTO NEXT 3 DETIK
     function autoKlikNext() {
         if (document.body.dataset.isWaiting === "true" || isProcessingSkip) return true;
 
@@ -378,15 +382,15 @@
             if (isNextBtn) {
                 if (!btn.disabled && !btn.classList.contains('sd-navigation__complete-btn--disabled') && btn.offsetParent !== null) {
                     document.body.dataset.isWaiting = "true";
-                    let countdown = DELAY_NEXT / 3000;
+                    let countdown = DELAY_NEXT / 1000;
                     updateUI(`Auto Next (${countdown}s)...`);
-                    const interval = setInterval(() => { countdown--; if (countdown > 0) updateUI(`Auto Next (${countdown}s)...`); }, 3000);
+                    const interval = setInterval(() => { countdown--; if (countdown > 0) updateUI(`Auto Next (${countdown}s)...`); }, 1000);
                     setTimeout(() => {
                         clearInterval(interval);
                         btn.click();
                         reportProgress();
                         updateUI("Memproses...");
-                        setTimeout(() => { document.body.dataset.isWaiting = "false"; }, 3000);
+                        setTimeout(() => { document.body.dataset.isWaiting = "false"; }, 1000);
                     }, DELAY_NEXT);
                     return true;
                 }
@@ -500,7 +504,6 @@
                         }, 500);
                     }
                 }
-                if(!isAnswered) unAnsweredCount++;
             }
         }
         autoKlikNext();
@@ -522,12 +525,15 @@
                 updateUI("Kirim Final...");
                 btnKirimPopup.click();
                 finalKirimClicked = true;
-                GM_setValue('status_rapor_done', true); // Lock Permanent
+                GM_setValue('status_rapor_done', true);
                 raporDone = true;
             }
         }
     }
 
+    // =================================================================
+    // MAIN LOOP CHECKER + AUTO FORCE RUN (WATCHDOG)
+    // =================================================================
     setInterval(() => {
         const currentTime = Date.now();
         const url = window.location.href;
@@ -535,7 +541,16 @@
 
         const isBusy = isProcessingSkip || Array.from(document.querySelectorAll('.sd-element, .sd-question')).some(q => q.dataset.isWaiting === "true" || q.dataset.done === "busy") || document.body.dataset.isWaiting === "true";
         if (isBusy) reportProgress();
-        if (currentTime - window.lastActivity > 30000) { location.reload(); return; }
+
+        // --- FITUR PAKSA JALAN OTOMATIS JIKA STUCK 20 DETIK ---
+        if (currentTime - window.lastActivity > 20000) {
+            console.log("[WATCHDOG] Stuck terdeteksi! Memaksa skip pasien ini...");
+            updateUI("🚨 STUCK! Paksa ke Pendaftaran...");
+            setTimeout(() => {
+                window.location.href = "https://sehatindonesiaku.kemkes.go.id/ckg-pendaftaran-individu";
+            }, 1000);
+            return; // Jangan reload, mending skip saja
+        }
 
         scrapeProfile();
         if (!isProcessingSkip) handleSystemPopups();
@@ -562,7 +577,7 @@
                         const label = checkbox.closest('label') || row.querySelector('label');
                         const visualToggle = label ? label.querySelector('div') : null;
                         if (label) {
-                            if (raporDone) { GM_setValue('status_rapor_done', false); raporDone = false; } // Auto Unlock
+                            if (raporDone) { GM_setValue('status_rapor_done', false); raporDone = false; }
                             label.click();
                             if (checkbox) checkbox.click();
                             if (visualToggle) visualToggle.click();
@@ -584,7 +599,7 @@
                 if (btnInput && (isGray || isDalamPemeriksaan || isBelumDiperiksa)) {
                     isDashboardClean = false;
                     unfinishedRow = rowText.substring(0, 10);
-                    if (raporDone) { GM_setValue('status_rapor_done', false); raporDone = false; } // Auto Unlock
+                    if (raporDone) { GM_setValue('status_rapor_done', false); raporDone = false; }
                     generatedData.isGenerated = false;
                     updateUI(`Mengerjakan: ${unfinishedRow}...`);
                     btnInput.click();
@@ -593,36 +608,32 @@
                 }
             }
 
-            // 2. DASHBOARD BERSIH
+            // 2. DASHBOARD BERSIH (Paksa Hajar Tombol Selesai)
             if (isDashboardClean) {
-                // PRIORITAS 1: KIRIM RAPOR (1x)
-                if (!raporDone) {
+                // PRIORITAS SUPER: HAJAR TOMBOL SELESAI KALAU ADA
+                const btnSelesaiLayanan = document.querySelector('.btn-outline-error') || findButtonByText("selesaikan layanan");
+                if (btnSelesaiLayanan) {
+                    updateUI("💾 Memaksa Selesai...");
+                    btnSelesaiLayanan.click();
+                    setTimeout(() => {
+                        window.location.href = "https://sehatindonesiaku.kemkes.go.id/ckg-pendaftaran-individu";
+                    }, 3000);
+                    return;
+                }
+
+                // PRIORITAS 1: KIRIM RAPOR
+                if (!raporDone && !raporClicked) {
                     const btnRapor = document.querySelector('.btn-sent-report') || findButtonByText("kirim rapor");
                     if (btnRapor) {
-                        updateUI("Kirim Rapor...");
+                        updateUI("📤 Mengirim Rapor...");
                         btnRapor.click();
                         raporClicked = true;
                         reportProgress();
-                        return;
-                    }
-                }
-                // PRIORITAS 2: SELESAIKAN LAYANAN
-                else {
-                    const btnSelesaiLayanan = document.querySelector('.btn-outline-error') || findButtonByText("selesaikan layanan");
-                    if (btnSelesaiLayanan) {
-                        updateUI("Selesaikan Layanan...");
-                        btnSelesaiLayanan.click();
-
-                        // >>> PERBAIKANNYA DISINI <<<
                         setTimeout(() => {
-                            updateUI("🔄 Balik ke Pendaftaran...");
-                            // Perintah pindah halaman:
-                            window.location.href = "https://sehatindonesiaku.kemkes.go.id/ckg-pendaftaran-individu";
-                        },5000); // Tunggu 5000ms (5 Detik) biar data tersimpan dulu
+                            updateUI("✅ Rapor Terkirim. Siap Selesai.");
+                            raporDone = true;
+                        }, 5000);
                         return;
-
-                    } else {
-                        updateUI("Selesai.");
                     }
                 }
             } else {
@@ -639,8 +650,5 @@
             }
             runAutoFillLogic();
         }
-    }, 1000); // Interval cek dipercepat 1 detik
-
+    }, 1000);
 })();
-
-
