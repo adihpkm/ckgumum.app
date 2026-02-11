@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         CKG Umum Puskesmas Kosambi
-// @version      1.1
+// @version      1.2
 // @description  Instalasi Otomatis Daftar & Skrining CKG
 // @author       Adih
 // @match        https://sehatindonesiaku.kemkes.go.id/*
@@ -15,8 +15,3 @@
 // @updateURL    https://raw.githubusercontent.com/adihpkm/ckgumum.app/refs/heads/main/app_ckgumum.user.js
 // @downloadURL  https://raw.githubusercontent.com/adihpkm/ckgumum.app/refs/heads/main/app_ckgumum.user.js
 // ==/UserScript==
-
-(function() {
-    'use strict';
-    console.log("Sistem CKG Aktif!");
-})();
