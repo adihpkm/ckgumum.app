@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         CKG Umum Puskesmas Kosambi
-// @version      1.2
+// @version      1.3
 // @description  Instalasi Otomatis Daftar & Skrining CKG
 // @author       Adih
 // @match        https://sehatindonesiaku.kemkes.go.id/*
