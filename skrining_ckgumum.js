@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SKRINING CKG UMUM
 // @namespace    http://tampermonkey.net/
-// @version      1.0
+// @version      1.1
 // @description  Pemeriksan mandiri dan pelayanan nakes
 // @author       2026 © Adih Puskesmas Kosambi
 // @match        https://sehatindonesiaku.kemkes.go.id/ckg-pelayanan*
@@ -642,3 +642,4 @@
     }, 1000); // Interval cek dipercepat 1 detik
 
 })();
+
