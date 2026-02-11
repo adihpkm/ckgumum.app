@@ -122,7 +122,7 @@
 // 12. Skrining Telinga dan Mata (18-39 tahun)
   { q: "Apa Hasil Pemeriksaan Telinga Luar (serumen impaksi)?", a: "Tidak ada serumen impaksi" },
   { q: "Apa Hasil Pemeriksaan Telinga Luar (infeksi telinga)?", a: "Tidak ada infeksi telinga" },
-  { q: "Hasil pemeriksaan tajam pendengaran?", a: "Normal" },
+  { q: "Hasil pemeriksaan tajam pendengaran", a: "Normal" },
   { q: "Apa hasil skrining tajam penglihatan?", a: "Normal (visus 6/6 - 6/12)" },
 // 13. Mobilisasi - Pemeriksaan Lanjutan (SPPB)
   { q: "Tes keseimbangan: berdiri selama 10 detik dengan kaki di masing-masing : Berdiri berdampingan", a: "Bertahan 10 detik" },
@@ -640,4 +640,5 @@
             runAutoFillLogic();
         }
     }, 1000); // Interval cek dipercepat 1 detik
+
 })();
